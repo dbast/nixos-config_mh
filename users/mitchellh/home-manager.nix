@@ -1,43 +1,63 @@
 { isWSL, inputs, ... }:
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   sources = import ../../nix/sources.nix;
   isDarwin = pkgs.stdenv.isDarwin;
   isLinux = pkgs.stdenv.isLinux;
 
-  shellAliases = {
-    ga = "git add";
-    gc = "git commit";
-    gco = "git checkout";
-    gcp = "git cherry-pick";
-    gdiff = "git diff";
-    gl = "git prettylog";
-    gp = "git push";
-    gs = "git status";
-    gt = "git tag";
+  shellAliases =
+    {
+      ga = "git add";
+      gc = "git commit";
+      gco = "git checkout";
+      gcp = "git cherry-pick";
+      gdiff = "git diff";
+      gl = "git prettylog";
+      gp = "git push";
+      gs = "git status";
+      gt = "git tag";
 
-    jd = "jj desc";
-    jf = "jj git fetch";
-    jn = "jj new";
-    jp = "jj git push";
-    js = "jj st";
-  } // (if isLinux then {
-    # Two decades of using a Mac has made this such a strong memory
-    # that I'm just going to keep it consistent.
-    pbcopy = "xclip";
-    pbpaste = "xclip -o";
-  } else {});
+      jd = "jj desc";
+      jf = "jj git fetch";
+      jn = "jj new";
+      jp = "jj git push";
+      js = "jj st";
+    }
+    // (
+      if isLinux then
+        {
+          # Two decades of using a Mac has made this such a strong memory
+          # that I'm just going to keep it consistent.
+          pbcopy = "xclip";
+          pbpaste = "xclip -o";
+        }
+      else
+        { }
+    );
 
   # For our MANPAGER env var
   # https://github.com/sharkdp/bat/issues/1145
-  manpager = (pkgs.writeShellScriptBin "manpager" (if isDarwin then ''
-    sh -c 'col -bx | bat -l man -p'
-    '' else ''
-    cat "$1" | col -bx | bat --language man --style plain
-  ''));
-in {
+  manpager = (
+    pkgs.writeShellScriptBin "manpager" (
+      if isDarwin then
+        ''
+          sh -c 'col -bx | bat -l man -p'
+        ''
+      else
+        ''
+          cat "$1" | col -bx | bat --language man --style plain
+        ''
+    )
+  );
+in
+{
   # Home-manager 22.11 requires this be set. We never set it so we have
   # to use the old state version.
   home.stateVersion = "18.09";
@@ -54,85 +74,105 @@ in {
   # Packages I always want installed. Most packages I install using
   # per-project flakes sourced with direnv and nix-shell, so this is
   # not a huge list.
-  home.packages = [
-    pkgs._1password-cli
-    pkgs.asciinema
-    pkgs.bat
-    pkgs.eza
-    pkgs.fd
-    pkgs.fzf
-    pkgs.gh
-    pkgs.htop
-    pkgs.jq
-    pkgs.ripgrep
-    pkgs.sentry-cli
-    pkgs.tree
-    pkgs.watch
+  home.packages =
+    [
+      pkgs._1password-cli
+      pkgs.asciinema
+      pkgs.bat
+      pkgs.eza
+      pkgs.fd
+      pkgs.fzf
+      pkgs.gh
+      pkgs.htop
+      pkgs.jq
+      pkgs.ripgrep
+      pkgs.sentry-cli
+      pkgs.tree
+      pkgs.watch
 
-    pkgs.gopls
-    pkgs.zigpkgs."0.14.0"
+      pkgs.gopls
+      pkgs.zigpkgs."0.14.0"
 
-    pkgs.claude-code
-    pkgs.codex
+      pkgs.claude-code
+      pkgs.codex
 
-    # Node is required for Copilot.vim
-    pkgs.nodejs
-  ] ++ (lib.optionals isDarwin [
-    # This is automatically setup on Linux
-    pkgs.cachix
-    pkgs.tailscale
-  ]) ++ (lib.optionals (isLinux && !isWSL) [
-    pkgs.chromium
-    pkgs.firefox
-    pkgs.rofi
-    pkgs.valgrind
-    pkgs.zathura
-    pkgs.xfce.xfce4-terminal
-  ]);
+      # Node is required for Copilot.vim
+      pkgs.nodejs
+    ]
+    ++ (lib.optionals isDarwin [
+      # This is automatically setup on Linux
+      pkgs.cachix
+      pkgs.tailscale
+    ])
+    ++ (lib.optionals (isLinux && !isWSL) [
+      pkgs.chromium
+      pkgs.firefox
+      pkgs.rofi
+      pkgs.valgrind
+      pkgs.zathura
+      pkgs.xfce.xfce4-terminal
+    ]);
 
   #---------------------------------------------------------------------
   # Env vars and dotfiles
   #---------------------------------------------------------------------
 
-  home.sessionVariables = {
-    LANG = "en_US.UTF-8";
-    LC_CTYPE = "en_US.UTF-8";
-    LC_ALL = "en_US.UTF-8";
-    EDITOR = "nvim";
-    PAGER = "less -FirSwX";
-    MANPAGER = "${manpager}/bin/manpager";
+  home.sessionVariables =
+    {
+      LANG = "en_US.UTF-8";
+      LC_CTYPE = "en_US.UTF-8";
+      LC_ALL = "en_US.UTF-8";
+      EDITOR = "nvim";
+      PAGER = "less -FirSwX";
+      MANPAGER = "${manpager}/bin/manpager";
 
-    AMP_API_KEY = "op://Private/Amp_API/credential";
-    OPENAI_API_KEY = "op://Private/OpenAPI_Personal/credential";
-  } // (if isDarwin then {
-    # See: https://github.com/NixOS/nixpkgs/issues/390751
-    DISPLAY = "nixpkgs-390751";
-  } else {});
+      AMP_API_KEY = "op://Private/Amp_API/credential";
+      OPENAI_API_KEY = "op://Private/OpenAPI_Personal/credential";
+    }
+    // (
+      if isDarwin then
+        {
+          # See: https://github.com/NixOS/nixpkgs/issues/390751
+          DISPLAY = "nixpkgs-390751";
+        }
+      else
+        { }
+    );
 
   home.file = {
     ".gdbinit".source = ./gdbinit;
     ".inputrc".source = ./inputrc;
   };
 
-  xdg.configFile = {
-    "i3/config".text = builtins.readFile ./i3;
-    "jj/config.toml".source = ./jujutsu.toml;
-    "rofi/config.rasi".text = builtins.readFile ./rofi;
+  xdg.configFile =
+    {
+      "i3/config".text = builtins.readFile ./i3;
+      "jj/config.toml".source = ./jujutsu.toml;
+      "rofi/config.rasi".text = builtins.readFile ./rofi;
 
-    # tree-sitter parsers
-    "nvim/parser/proto.so".source = "${pkgs.tree-sitter-proto}/parser";
-    "nvim/queries/proto/folds.scm".source =
-      "${sources.tree-sitter-proto}/queries/folds.scm";
-    "nvim/queries/proto/highlights.scm".source =
-      "${sources.tree-sitter-proto}/queries/highlights.scm";
-    "nvim/queries/proto/textobjects.scm".source =
-      ./textobjects.scm;
-  } // (if isDarwin then {
-    # Rectangle.app. This has to be imported manually using the app.
-    "rectangle/RectangleConfig.json".text = builtins.readFile ./RectangleConfig.json;
-  } else {}) // (if isLinux then {
-    "ghostty/config".text = builtins.readFile ./ghostty.linux;
-  } else {});
+      # tree-sitter parsers
+      "nvim/parser/proto.so".source = "${pkgs.tree-sitter-proto}/parser";
+      "nvim/queries/proto/folds.scm".source = "${sources.tree-sitter-proto}/queries/folds.scm";
+      "nvim/queries/proto/highlights.scm".source = "${sources.tree-sitter-proto}/queries/highlights.scm";
+      "nvim/queries/proto/textobjects.scm".source = ./textobjects.scm;
+    }
+    // (
+      if isDarwin then
+        {
+          # Rectangle.app. This has to be imported manually using the app.
+          "rectangle/RectangleConfig.json".text = builtins.readFile ./RectangleConfig.json;
+        }
+      else
+        { }
+    )
+    // (
+      if isLinux then
+        {
+          "ghostty/config".text = builtins.readFile ./ghostty.linux;
+        }
+      else
+        { }
+    );
 
   #---------------------------------------------------------------------
   # Programs
@@ -142,23 +182,26 @@ in {
 
   programs.bash = {
     enable = true;
-    shellOptions = [];
-    historyControl = [ "ignoredups" "ignorespace" ];
+    shellOptions = [ ];
+    historyControl = [
+      "ignoredups"
+      "ignorespace"
+    ];
     initExtra = builtins.readFile ./bashrc;
     shellAliases = shellAliases;
   };
 
-  programs.direnv= {
+  programs.direnv = {
     enable = true;
 
     config = {
       whitelist = {
-        prefix= [
+        prefix = [
           "$HOME/code/go/src/github.com/hashicorp"
           "$HOME/code/go/src/github.com/mitchellh"
         ];
 
-        exact = ["$HOME/.envrc"];
+        exact = [ "$HOME/.envrc" ];
       };
     };
   };
@@ -166,22 +209,27 @@ in {
   programs.fish = {
     enable = true;
     shellAliases = shellAliases;
-    interactiveShellInit = lib.strings.concatStrings (lib.strings.intersperse "\n" ([
-      "source ${sources.theme-bobthefish}/functions/fish_prompt.fish"
-      "source ${sources.theme-bobthefish}/functions/fish_right_prompt.fish"
-      "source ${sources.theme-bobthefish}/functions/fish_title.fish"
-      (builtins.readFile ./config.fish)
-      "set -g SHELL ${pkgs.fish}/bin/fish"
-    ]));
+    interactiveShellInit = lib.strings.concatStrings (
+      lib.strings.intersperse "\n" ([
+        "source ${sources.theme-bobthefish}/functions/fish_prompt.fish"
+        "source ${sources.theme-bobthefish}/functions/fish_right_prompt.fish"
+        "source ${sources.theme-bobthefish}/functions/fish_title.fish"
+        (builtins.readFile ./config.fish)
+        "set -g SHELL ${pkgs.fish}/bin/fish"
+      ])
+    );
 
-    plugins = map (n: {
-      name = n;
-      src  = sources.${n};
-    }) [
-      "fish-fzf"
-      "fish-foreign-env"
-      "theme-bobthefish"
-    ];
+    plugins =
+      map
+        (n: {
+          name = n;
+          src = sources.${n};
+        })
+        [
+          "fish-fzf"
+          "fish-foreign-env"
+          "theme-bobthefish"
+        ];
   };
 
   programs.git = {
@@ -211,7 +259,11 @@ in {
   programs.go = {
     enable = true;
     goPath = "code/go";
-    goPrivate = [ "github.com/mitchellh" "github.com/hashicorp" "rfc822.mx" ];
+    goPrivate = [
+      "github.com/mitchellh"
+      "github.com/hashicorp"
+      "rfc822.mx"
+    ];
   };
 
   programs.jujutsu = {
@@ -249,12 +301,36 @@ in {
       env.TERM = "xterm-256color";
 
       key_bindings = [
-        { key = "K"; mods = "Command"; chars = "ClearHistory"; }
-        { key = "V"; mods = "Command"; action = "Paste"; }
-        { key = "C"; mods = "Command"; action = "Copy"; }
-        { key = "Key0"; mods = "Command"; action = "ResetFontSize"; }
-        { key = "Equals"; mods = "Command"; action = "IncreaseFontSize"; }
-        { key = "Subtract"; mods = "Command"; action = "DecreaseFontSize"; }
+        {
+          key = "K";
+          mods = "Command";
+          chars = "ClearHistory";
+        }
+        {
+          key = "V";
+          mods = "Command";
+          action = "Paste";
+        }
+        {
+          key = "C";
+          mods = "Command";
+          action = "Copy";
+        }
+        {
+          key = "Key0";
+          mods = "Command";
+          action = "ResetFontSize";
+        }
+        {
+          key = "Equals";
+          mods = "Command";
+          action = "IncreaseFontSize";
+        }
+        {
+          key = "Subtract";
+          mods = "Command";
+          action = "DecreaseFontSize";
+        }
       ];
     };
   };
@@ -287,45 +363,48 @@ in {
 
     withPython3 = true;
 
-    plugins = with pkgs; [
-      customVim.vim-copilot
-      customVim.vim-cue
-      customVim.vim-fish
-      customVim.vim-glsl
-      customVim.vim-misc
-      customVim.vim-pgsql
-      customVim.vim-tla
-      customVim.vim-zig
-      customVim.pigeon
-      customVim.AfterColors
+    plugins =
+      with pkgs;
+      [
+        customVim.vim-copilot
+        customVim.vim-cue
+        customVim.vim-fish
+        customVim.vim-glsl
+        customVim.vim-misc
+        customVim.vim-pgsql
+        customVim.vim-tla
+        customVim.vim-zig
+        customVim.pigeon
+        customVim.AfterColors
 
-      customVim.vim-nord
-      customVim.nvim-codecompanion
-      customVim.nvim-comment
-      customVim.nvim-conform
-      customVim.nvim-dressing
-      customVim.nvim-gitsigns
-      customVim.nvim-lualine
-      customVim.nvim-lspconfig
-      customVim.nvim-nui
-      customVim.nvim-plenary # required for telescope
-      customVim.nvim-render-markdown
-      customVim.nvim-telescope
-      customVim.nvim-treesitter-context
+        customVim.vim-nord
+        customVim.nvim-codecompanion
+        customVim.nvim-comment
+        customVim.nvim-conform
+        customVim.nvim-dressing
+        customVim.nvim-gitsigns
+        customVim.nvim-lualine
+        customVim.nvim-lspconfig
+        customVim.nvim-nui
+        customVim.nvim-plenary # required for telescope
+        customVim.nvim-render-markdown
+        customVim.nvim-telescope
+        customVim.nvim-treesitter-context
 
-      vimPlugins.vim-eunuch
-      vimPlugins.vim-markdown
-      vimPlugins.vim-nix
-      vimPlugins.typescript-vim
-      vimPlugins.nvim-treesitter-parsers.elixir
-      vimPlugins.nvim-treesitter
-      vimPlugins.nvim-treesitter.withAllGrammars
-    ] ++ (lib.optionals (!isWSL) [
-      # This is causing a segfaulting while building our installer
-      # for WSL so just disable it for now. This is a pretty
-      # unimportant plugin anyway.
-      customVim.nvim-web-devicons
-    ]);
+        vimPlugins.vim-eunuch
+        vimPlugins.vim-markdown
+        vimPlugins.vim-nix
+        vimPlugins.typescript-vim
+        vimPlugins.nvim-treesitter-parsers.elixir
+        vimPlugins.nvim-treesitter
+        vimPlugins.nvim-treesitter.withAllGrammars
+      ]
+      ++ (lib.optionals (!isWSL) [
+        # This is causing a segfaulting while building our installer
+        # for WSL so just disable it for now. This is a pretty
+        # unimportant plugin anyway.
+        customVim.nvim-web-devicons
+      ]);
 
     extraConfig = (import ./vim-config.nix) { inherit sources; };
   };

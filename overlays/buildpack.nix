@@ -1,4 +1,6 @@
-let sources = import ../nix/sources.nix; in
+let
+  sources = import ../nix/sources.nix;
+in
 self: super: {
   buildpack = super.buildpack.overrideAttrs (oldAttrs: rec {
     version = super.lib.strings.removePrefix "v" sources.pack.branch;

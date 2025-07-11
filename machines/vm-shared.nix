@@ -1,4 +1,11 @@
-{ config, pkgs, lib, currentSystem, currentSystemName, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  currentSystem,
+  currentSystemName,
+  ...
+}:
 
 {
   imports = [
@@ -22,8 +29,10 @@
     # this, use your own, or toss it. Its typically safe to use a binary cache
     # since the data inside is checksummed.
     settings = {
-      substituters = ["https://mitchellh-nixos-config.cachix.org"];
-      trusted-public-keys = ["mitchellh-nixos-config.cachix.org-1:bjEbXJyLrL1HZZHBbO4QALnI5faYZppzkU4D2s0G8RQ="];
+      substituters = [ "https://mitchellh-nixos-config.cachix.org" ];
+      trusted-public-keys = [
+        "mitchellh-nixos-config.cachix.org-1:bjEbXJyLrL1HZZHBbO4QALnI5faYZppzkU4D2s0G8RQ="
+      ];
     };
   };
 
@@ -96,27 +105,30 @@
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    cachix
-    gnumake
-    killall
-    niv
-    xclip
+  environment.systemPackages =
+    with pkgs;
+    [
+      cachix
+      gnumake
+      killall
+      niv
+      xclip
 
-    # For hypervisors that support auto-resizing, this script forces it.
-    # I've noticed not everyone listens to the udev events so this is a hack.
-    (writeShellScriptBin "xrandr-auto" ''
-      xrandr --output Virtual-1 --auto
-    '')
-  ] ++ lib.optionals (currentSystemName == "vm-aarch64") [
-    # This is needed for the vmware user tools clipboard to work.
-    # You can test if you don't need this by deleting this and seeing
-    # if the clipboard sill works.
-    gtkmm3
-  ];
+      # For hypervisors that support auto-resizing, this script forces it.
+      # I've noticed not everyone listens to the udev events so this is a hack.
+      (writeShellScriptBin "xrandr-auto" ''
+        xrandr --output Virtual-1 --auto
+      '')
+    ]
+    ++ lib.optionals (currentSystemName == "vm-aarch64") [
+      # This is needed for the vmware user tools clipboard to work.
+      # You can test if you don't need this by deleting this and seeing
+      # if the clipboard sill works.
+      gtkmm3
+    ];
 
   # Our default non-specialised desktop environment.
-  services.xserver = lib.mkIf (config.specialisation != {}) {
+  services.xserver = lib.mkIf (config.specialisation != { }) {
     enable = true;
     xkb.layout = "us";
     desktopManager.gnome.enable = true;

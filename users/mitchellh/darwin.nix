@@ -7,7 +7,7 @@
 
   homebrew = {
     enable = true;
-    casks  = [
+    casks = [
       "1password"
       "claude"
       "cleanshot"

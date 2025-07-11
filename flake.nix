@@ -61,7 +61,7 @@
     nvim-gitsigns.flake = false;
     nvim-lspconfig.url = "github:neovim/nvim-lspconfig";
     nvim-lspconfig.flake = false;
-    nvim-lualine.url ="github:nvim-lualine/lualine.nvim";
+    nvim-lualine.url = "github:nvim-lualine/lualine.nvim";
     nvim-lualine.flake = false;
     nvim-nui.url = "github:MunifTanjim/nui.nvim";
     nvim-nui.flake = false;
@@ -81,85 +81,100 @@
     vim-misc.flake = false;
   };
 
-  outputs = { self, nixpkgs, home-manager, darwin, ... }@inputs: let
-    # Overlays is the list of overlays we want to apply from flake inputs.
-    overlays = [
-      inputs.jujutsu.overlays.default
-      inputs.zig.overlays.default
+  outputs =
+    {
+      self,
+      nixpkgs,
+      home-manager,
+      darwin,
+      ...
+    }@inputs:
+    let
+      # Overlays is the list of overlays we want to apply from flake inputs.
+      overlays = [
+        inputs.jujutsu.overlays.default
+        inputs.zig.overlays.default
 
-      (final: prev:
+        (
+          final: prev:
+          let
+            # We need to create a new nixpkgs instance from the unstable input
+            # so that we can apply configuration to it, such as allowing unfree
+            # packages.
+            nixpkgs-unstable-configured = import inputs.nixpkgs-unstable {
+              system = prev.system;
+              config.allowUnfree = true;
+            };
+          in
+          rec {
+            # gh CLI on stable has bugs.
+            gh = nixpkgs-unstable-configured.gh;
+
+            # Want the latest version of these
+            claude-code = nixpkgs-unstable-configured.claude-code;
+            nushell = nixpkgs-unstable-configured.nushell;
+
+            ibus = ibus_stable;
+            ibus_stable = inputs.nixpkgs.legacyPackages.${prev.system}.ibus;
+            ibus_1_5_29 = inputs.nixpkgs-old-ibus.legacyPackages.${prev.system}.ibus;
+            ibus_1_5_31 = nixpkgs-unstable-configured.ibus;
+          }
+        )
+      ];
+
+      mkSystem = import ./lib/mksystem.nix {
+        inherit overlays nixpkgs inputs;
+      };
+    in
+    {
+      nixosConfigurations.vm-aarch64 = mkSystem "vm-aarch64" {
+        system = "aarch64-linux";
+        user = "mitchellh";
+      };
+
+      nixosConfigurations.vm-aarch64-prl = mkSystem "vm-aarch64-prl" rec {
+        system = "aarch64-linux";
+        user = "mitchellh";
+      };
+
+      nixosConfigurations.vm-aarch64-utm = mkSystem "vm-aarch64-utm" rec {
+        system = "aarch64-linux";
+        user = "mitchellh";
+      };
+
+      nixosConfigurations.vm-intel = mkSystem "vm-intel" rec {
+        system = "x86_64-linux";
+        user = "mitchellh";
+      };
+
+      nixosConfigurations.wsl = mkSystem "wsl" {
+        system = "x86_64-linux";
+        user = "mitchellh";
+        wsl = true;
+      };
+
+      darwinConfigurations.macbook-pro-m1 = mkSystem "macbook-pro-m1" {
+        system = "aarch64-darwin";
+        user = "mitchellh";
+        darwin = true;
+      };
+      # Add a formatter output using treefmt, similar to home-manager
+      formatter =
         let
-          # We need to create a new nixpkgs instance from the unstable input
-          # so that we can apply configuration to it, such as allowing unfree
-          # packages.
-          nixpkgs-unstable-configured = import inputs.nixpkgs-unstable {
-            system = prev.system;
-            config.allowUnfree = true;
-          };
+          forAllPkgs =
+            f:
+            inputs.nixpkgs.lib.genAttrs inputs.nixpkgs.lib.systems.flakeExposed (
+              system: f inputs.nixpkgs.legacyPackages.${system}
+            );
         in
-        rec {
-          # gh CLI on stable has bugs.
-          gh = nixpkgs-unstable-configured.gh;
-
-          # Want the latest version of these
-          claude-code = nixpkgs-unstable-configured.claude-code;
-          nushell = nixpkgs-unstable-configured.nushell;
-
-          ibus = ibus_stable;
-          ibus_stable = inputs.nixpkgs.legacyPackages.${prev.system}.ibus;
-          ibus_1_5_29 = inputs.nixpkgs-old-ibus.legacyPackages.${prev.system}.ibus;
-          ibus_1_5_31 = nixpkgs-unstable-configured.ibus;
-        })
-    ];
-
-    mkSystem = import ./lib/mksystem.nix {
-      inherit overlays nixpkgs inputs;
+        forAllPkgs (
+          pkgs:
+          pkgs.treefmt.withConfig {
+            runtimeInputs = with pkgs; [
+              nixfmt-rfc-style
+            ];
+            settings = pkgs.lib.importTOML ./treefmt.toml;
+          }
+        );
     };
-  in {
-    nixosConfigurations.vm-aarch64 = mkSystem "vm-aarch64" {
-      system = "aarch64-linux";
-      user   = "mitchellh";
-    };
-
-    nixosConfigurations.vm-aarch64-prl = mkSystem "vm-aarch64-prl" rec {
-      system = "aarch64-linux";
-      user   = "mitchellh";
-    };
-
-    nixosConfigurations.vm-aarch64-utm = mkSystem "vm-aarch64-utm" rec {
-      system = "aarch64-linux";
-      user   = "mitchellh";
-    };
-
-    nixosConfigurations.vm-intel = mkSystem "vm-intel" rec {
-      system = "x86_64-linux";
-      user   = "mitchellh";
-    };
-
-    nixosConfigurations.wsl = mkSystem "wsl" {
-      system = "x86_64-linux";
-      user   = "mitchellh";
-      wsl    = true;
-    };
-
-    darwinConfigurations.macbook-pro-m1 = mkSystem "macbook-pro-m1" {
-      system = "aarch64-darwin";
-      user   = "mitchellh";
-      darwin = true;
-    };
-    # Add a formatter output using treefmt, similar to home-manager
-    formatter = let
-      forAllPkgs = f:
-        inputs.nixpkgs.lib.genAttrs inputs.nixpkgs.lib.systems.flakeExposed
-          (system: f inputs.nixpkgs.legacyPackages.${system});
-    in forAllPkgs (
-      pkgs:
-        pkgs.treefmt.withConfig {
-          runtimeInputs = with pkgs; [
-            nixfmt-rfc-style
-          ];
-          settings = pkgs.lib.importTOML ./treefmt.toml;
-        }
-    );
-  };
 }

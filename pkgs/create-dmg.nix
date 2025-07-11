@@ -1,4 +1,8 @@
-{ stdenv, fetchFromGitHub, makeWrapper }:
+{
+  stdenv,
+  fetchFromGitHub,
+  makeWrapper,
+}:
 
 stdenv.mkDerivation rec {
   pname = "create-dmg";

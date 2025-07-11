@@ -1,5 +1,6 @@
 # Gnome with ibus
-{ lib, pkgs, ... }: {
+{ lib, pkgs, ... }:
+{
   specialisation."gnome-ibus".configuration = {
     services.xserver = {
       enable = true;
