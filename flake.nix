@@ -147,5 +147,19 @@
       user   = "mitchellh";
       darwin = true;
     };
+    # Add a formatter output using treefmt, similar to home-manager
+    formatter = let
+      forAllPkgs = f:
+        inputs.nixpkgs.lib.genAttrs inputs.nixpkgs.lib.systems.flakeExposed
+          (system: f inputs.nixpkgs.legacyPackages.${system});
+    in forAllPkgs (
+      pkgs:
+        pkgs.treefmt.withConfig {
+          runtimeInputs = with pkgs; [
+            nixfmt-rfc-style
+          ];
+          settings = pkgs.lib.importTOML ./treefmt.toml;
+        }
+    );
   };
 }
